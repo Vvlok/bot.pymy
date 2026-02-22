@@ -1,0 +1,53 @@
+import telebot
+import os
+import random
+    
+bot = telebot.TeleBot("8304230087:AAFHYN1ktw6Z9KtSx32ovScKjoJx27a4Ol4")
+
+coin = 0
+    
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    bot.reply_to(message, "Привет! Это твой экологический бот! Отправь команду /go, чтобы начать! (Если что, все ответы пиши с заглавной буквы!) Но если хочешь создать счётчик экологически добрых дел, напиши /list!")
+
+@bot.message_handler(commands=['go'])
+def send_welcome(message):
+    global coin
+    q1 = input("Какой газ является основным виновником парникового эффекта и глобального потепления? ")
+    if q1 == "":
+        bot.send_message(message.chat.id, 'Улекислый газ')
+        print("Углекислый газ")
+        coin =+ 1
+    else:
+        print("Что означает термин «биоразнообразие»? ")
+    q2 = input("Разнообразие живых организмов")
+    if q2 == "":
+        print("")
+        coin =+ 1
+    else:
+        print("")
+    q3 = input("")
+    if q3 == "":
+        print("")
+        coin =+ 1
+    else:
+        print("")
+    q4 = input("")
+    if q4 == "":
+        print("")
+        coin =+ 1
+    else:
+        print("")
+    q5 = input("")
+    if q5 == "":
+        print("")
+        coin =+ 1
+    else:
+        print("")
+              
+@bot.message_handler(commands=['list'])
+def send_welcome(message):
+     list = 0
+     print("")
+
+bot.polling()
