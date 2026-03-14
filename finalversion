@@ -1,0 +1,149 @@
+import telebot
+import os
+
+# Рекомендуется хранить токен в переменных окружения
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8304230087:AAFHYN1ktw6Z9KtSx32ovScKjoJx27a4Ol4")
+bot = telebot.TeleBot(TOKEN)
+
+# Словарь для хранения состояния пользователей и их очков
+user_states = {}  # {user_id: current_question_num}
+user_coins = {}   # {user_id: score}
+
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    user_id = message.chat.id
+    # Сбрасываем состояние пользователя при старте
+    if user_id in user_states:
+        del user_states[user_id]
+    
+    bot.reply_to(
+        message,
+        "Привет! Это твой экологический бот! Отправь команду /go, чтобы начать экологический квест! "
+        "(Если что, все ответы пиши с заглавной буквы!) "
+        "Если хочешь посмотреть счётчик экологически добрых дел, напиши /list, а если хочешь добавить такое дело в счётчик, напиши /plus. "
+        "А если ты не понимаешь, что может быть этими самыми делами, пиши /whatisit."
+    )
+
+@bot.message_handler(commands=['whatisit'])
+def whatisit(message):
+    bot.reply_to(
+        message,
+        "Экологически добрые дела — это поступки, которые помогают заботиться о природе и решать экологические проблемы. Они могут быть связаны с добровольческой деятельностью (эковолонтёрством) или с экологическим воспитанием."
+        "Некоторые направления экологически добрых дел:"
+        "Уборка территорий — добровольцы участвуют в субботниках, убирают мусор в лесах, заповедниках и на пляжах."
+        "Сортировка вторсырья — экоцентры приглашают волонтёров помогать сортировать отходы и подготавливать их к отправке на переработку."
+        "Работы в природных зонах — волонтёры могут маркировать маршруты туристов на экотропах, вести учёт животных, сажать деревья, помогать в заповедниках и национальных парках."
+        "Экопросвещение — активисты проводят лекции, семинары, уроки для школьников и студентов, чтобы научить других бережно относиться к природе."
+        "Помощь экосистемам — например, организация «пчелиного газона», замена моногазона на луговые растения."
+        "Забота о диких животных — установка кормушек и поилок для птиц, сообщение о раненом животном в центр реабилитации."
+    )
+
+@bot.message_handler(commands=['plus'])
+def plus_coins(message):
+    user_id = message.chat.id
+    # Инициализируем счёт пользователя, если его ещё нет
+    if user_id not in user_coins:
+        user_coins[user_id] = 0
+    # Увеличиваем счёт на 1
+    user_coins[user_id] += 1
+    bot.send_message(
+        message.chat.id,
+        f"Отлично! +1 очко к вашему счётчику экологически добрых дел! "
+        f"Теперь у вас {user_coins[user_id]} очков."
+    )
+
+@bot.message_handler(commands=['go'])
+def start_quiz(message):
+    user_id = message.chat.id
+    
+    # Инициализируем счёт пользователя, если его ещё нет (не сбрасываем существующие очки)
+    if user_id not in user_coins:
+        user_coins[user_id] = 0
+    
+    # Запускаем первый вопрос
+    user_states[user_id] = 1
+    send_question(message, 1)
+
+def send_question(message, question_num):
+    questions = {
+        1: "Какой газ является основным виновником парникового эффекта и глобального потепления?",
+        2: "Что означает термин «биоразнообразие»?",
+        3: "Как называется процесс переработки отходов для повторного использования?",
+        4: "Какое животное является символом Всемирного фонда дикой природы (WWF)?",
+        5: "Какой вид энергии считается наиболее экологичным?"
+    }
+    answers = {
+        1: "Углекислый газ",
+        2: "Разнообразие живых организмов",
+        3: "Рециклинг",
+        4: "Панда",
+        5: "Солнечная энергия"
+    }
+
+    if question_num in questions:
+        bot.register_next_step_handler_by_chat_id(
+            message.chat.id,
+            lambda msg: check_answer(msg, question_num, answers[question_num])
+        )
+        bot.send_message(message.chat.id, questions[question_num])
+    else:
+        # Все вопросы пройдены
+        final_score = user_coins.get(message.chat.id, 0)
+        if message.chat.id in user_states:
+            del user_states[message.chat.id]
+        
+        bot.send_message(
+            message.chat.id,
+            f"Викторина завершена! Вы набрали {final_score} очков. "
+            "Чтобы начать заново, отправьте /go."
+        )
+
+def check_answer(message, question_num, correct_answer):
+    user_answer = message.text.strip()
+    user_id = message.chat.id
+
+    if user_answer.lower() == correct_answer.lower():
+        user_coins[user_id] = user_coins.get(user_id, 0) + 1
+        bot.send_message(message.chat.id, "Правильно! +1 очко!")
+    else:
+        bot.send_message(
+            message.chat.id,
+            f"Неверно. Правильный ответ: {correct_answer}."
+        )
+
+    # Переходим к следующему вопросу
+    user_states[user_id] = question_num + 1
+    send_question(message, question_num + 1)
+
+@bot.message_handler(commands=['list'])
+def show_score(message):
+    user_id = message.chat.id
+    score = user_coins.get(user_id, 0)  # Используем user_coins вместо coins
+    bot.send_message(
+        message.chat.id,
+        f"Ваш текущий счётчик экологически добрых дел: {score} очков."
+    )
+
+@bot.message_handler(func=lambda message: True)
+def handle_unknown_commands(message):
+    user_id = message.chat.id
+    current_state = user_states.get(user_id)
+    
+    if current_state is not None and 1 <= current_state <= 5:
+        # Пользователь находится в процессе викторины — ждём ответа на вопрос
+        pass
+    else:
+        # Непонятная команда вне викторины
+        bot.send_message(
+            message.chat.id,
+            "Извините, я не понимаю эту команду. "
+            "Используйте:\n"
+            "/start — начать работу с ботом\n"
+            "/go — начать викторину\n"
+            "/list — посмотреть свой счёт\n"
+            "/plus — добавить 1 очко за экологическое доброе дело"
+        )
+
+if __name__ == "__main__":
+    print("Бот запущен...")
+    bot.polling(none_stop=True, interval=1)
